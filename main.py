@@ -23,7 +23,7 @@ class Application:
         self._startup_status = self._check_startup_status()
 
         self._icon = Icon('ip-widget')
-        self._icon.icon = Image.open(f"{self._images_path}/default.png")
+        self._icon.icon = Image.open(f"{self._images_path}/aq.png")
         self._icon.menu = Menu(
             MenuItem('Startup', action=self._toggle_startup, checked=lambda _: self._startup_status),
             MenuItem('Exit', action=self._stop),
@@ -58,11 +58,11 @@ class Application:
 
                 if ip_address != self._current_ip:
                     self._current_ip = ip_address
-                    self._icon.icon = Image.open(f"{self._images_path}/{ip_info['countryCode']}.png")
+                    self._icon.icon = Image.open(f"{self._images_path}/{ip_info['countryCode'].lower()}.png")
                     self._icon.title = ip_address
             else:
                 self._current_ip = None
-                self._icon.icon = Image.open(f"{self._images_path}/default.png")
+                self._icon.icon = Image.open(f"{self._images_path}/aq.png")
 
             self._stop_thread.wait(self._refresh_interval)
 
