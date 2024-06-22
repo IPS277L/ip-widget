@@ -1,4 +1,6 @@
+import ctypes
 import os
+import socket
 import sys
 import threading
 from http import HTTPStatus
@@ -13,21 +15,20 @@ from win32com.client import Dispatch
 
 class Application:
 
-    _refresh_interval = 15
-
     def __init__(self):
         self._stop_thread = threading.Event()
         self._images_path = os.path.join(os.path.abspath('.'), 'assets/images')
 
-        self._current_ip = None
         self._startup_status = self._check_startup_status()
 
         self._icon = Icon('ip-widget')
-        self._icon.icon = Image.open(f"{self._images_path}/aq.png")
         self._icon.menu = Menu(
             MenuItem('Startup', action=self._toggle_startup, checked=lambda _: self._startup_status),
             MenuItem('Exit', action=self._stop),
         )
+
+        self._set_default_icon()
+        self._refresh_ip()
 
     @property
     def _shortcut_path(self) -> str:
@@ -40,7 +41,7 @@ class Application:
 
         try:
             response = requests.get(service_url)
-        except ConnectionError:
+        except Exception:
             return False
 
         if response.status_code == HTTPStatus.OK:
@@ -49,22 +50,43 @@ class Application:
 
         return False
 
+    def _set_default_icon(self):
+        self._icon.icon = Image.open(f"{self._images_path}/aq.png")
+        self._icon.title = ''
+
     def _refresh_ip(self):
-        while True:
-            ip_info = self._get_ip_info()
+        ip_info = self._get_ip_info()
 
-            if ip_info:
-                ip_address = ip_info['query']
+        if ip_info:
+            self._icon.icon = Image.open(f"{self._images_path}/{ip_info['countryCode'].lower()}.png")
+            self._icon.title = ip_info['query']
+        else:
+            self._set_default_icon()
 
-                if ip_address != self._current_ip:
-                    self._current_ip = ip_address
-                    self._icon.icon = Image.open(f"{self._images_path}/{ip_info['countryCode'].lower()}.png")
-                    self._icon.title = ip_address
-            else:
-                self._current_ip = None
-                self._icon.icon = Image.open(f"{self._images_path}/aq.png")
+    def _is_network_change_completed(self) -> bool:
+        try:
+            socket.create_connection(('8.8.8.8', 53), timeout=15)
+            return True
+        except Exception:
+            return False
 
-            self._stop_thread.wait(self._refresh_interval)
+    def _monitor_network_change(self):
+        iphlpapi = ctypes.WinDLL('iphlpapi.dll')
+
+        NotifyAddrChange = iphlpapi.NotifyAddrChange
+        NotifyAddrChange.argtypes = [ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_void_p)]
+        NotifyAddrChange.restype = ctypes.wintypes.DWORD
+
+        notify_handle = ctypes.c_void_p()
+
+        while not self._stop_thread.is_set():
+            result = NotifyAddrChange(ctypes.byref(notify_handle), None)
+
+            if result == 0:
+                self._set_default_icon()
+
+                if self._is_network_change_completed():
+                    self._refresh_ip()
 
     def _check_startup_status(self) -> bool:
         return os.path.exists(self._shortcut_path)
@@ -98,7 +120,7 @@ class Application:
         icon.stop()
 
     def run(self):
-        threading.Thread(target=self._refresh_ip, daemon=True).start()
+        threading.Thread(target=self._monitor_network_change, daemon=True).start()
         self._icon.run()
 
 
