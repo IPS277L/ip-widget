@@ -36,6 +36,18 @@ class Application:
         return os.path.join(startup_folder, 'ip-widget.lnk')
 
     @staticmethod
+    def _prepare_tray_icon(flag: Image) -> Image:
+        flag_w, flag_h = flag.size
+        image_w, image_h = flag_w, flag_w
+
+        offset = ((image_w - flag_w) // 2, (image_h - flag_h) // 2)
+
+        background = Image.new('RGBA', (image_w, image_h), (0, 0, 0, 0))
+        background.paste(flag, offset)
+
+        return background
+
+    @staticmethod
     def _get_ip_info() -> Union[dict, bool]:
         service_url = 'http://ip-api.com/json/'
 
@@ -51,14 +63,18 @@ class Application:
         return False
 
     def _set_default_icon(self):
-        self._icon.icon = Image.open(f"{self._images_path}/aq.png")
+        flag_image = Image.open(f"{self._images_path}/aq.png")
+
+        self._icon.icon = self._prepare_tray_icon(flag_image)
         self._icon.title = ''
 
     def _refresh_ip(self):
         ip_info = self._get_ip_info()
 
         if ip_info:
-            self._icon.icon = Image.open(f"{self._images_path}/{ip_info['countryCode'].lower()}.png")
+            flag_image = Image.open(f"{self._images_path}/{ip_info['countryCode'].lower()}.png")
+
+            self._icon.icon = self._prepare_tray_icon(flag_image)
             self._icon.title = ip_info['query']
         else:
             self._set_default_icon()

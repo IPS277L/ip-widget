@@ -17,7 +17,7 @@ executables = [
 
 setup(
     name='ip-widget',
-    version='0.2.0',
+    version='0.3.0',
     description='IP Widget',
     options={'build_exe': build_options},
     executables=executables
