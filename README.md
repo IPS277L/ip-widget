@@ -8,6 +8,8 @@ Features:
 - Option to run at startup.
 - System tray menu for easy access.
 
+Screenshots:
+
 ![Screenshot of IP Widget tray icon](https://github.com/IPS277L/ip-widget/blob/main/screenshots/ip-widget-tray.png)
 ![Screenshot of IP Widget tray icon menu](https://github.com/IPS277L/ip-widget/blob/main/screenshots/ip-widget-tray-menu.png)
 
