@@ -3,29 +3,54 @@ import os
 import socket
 import sys
 import threading
-from http import HTTPStatus
-from typing import Union
 
-import requests
 import winshell
 from PIL import Image
 from pystray import Icon, Menu, MenuItem
 from win32com.client import Dispatch
 
+from constants import IPServices
+
 
 class Application:
+
+    DEFAULT_IP_SERVICE = IPServices.FreeIPAPI
 
     def __init__(self):
         self._stop_thread = threading.Event()
         self._images_path = os.path.join(os.path.abspath('.'), 'assets/images')
 
+        self._ip_services = {
+            ip_service.name: {
+                'class': ip_service.value,
+                'state': False
+            }
+            for ip_service in IPServices
+        }
         self._startup_status = self._check_startup_status()
 
         self._icon = Icon('ip-widget')
         self._icon.menu = Menu(
+            MenuItem('Refresh', action=self._refresh_ip_manual),
+            MenuItem(
+                'IP Service',
+                Menu(
+                    *[
+                        MenuItem(
+                            ip_service.name,
+                            action=self._select_ip_service,
+                            checked=lambda _, ip_service_name=ip_service.name: self._ip_service_state(ip_service_name)
+                        )
+                        for ip_service in IPServices 
+                    ]
+                )
+            ),
             MenuItem('Startup', action=self._toggle_startup, checked=lambda _: self._startup_status),
             MenuItem('Exit', action=self._stop),
         )
+
+        self._ip_service = self.DEFAULT_IP_SERVICE.value()
+        self._ip_services[self.DEFAULT_IP_SERVICE.name]['state'] = True
 
         self._set_default_icon()
         self._refresh_ip()
@@ -47,35 +72,16 @@ class Application:
 
         return background
 
-    @staticmethod
-    def _get_ip_info() -> Union[dict, bool]:
-        service_url = 'http://ip-api.com/json/'
-
-        try:
-            response = requests.get(service_url)
-        except Exception:
-            return False
-
-        if response.status_code == HTTPStatus.OK:
-            ip_data = response.json()
-            return ip_data
-
-        return False
-
     def _set_default_icon(self):
         flag_image = Image.open(f"{self._images_path}/aq.png")
-
         self._icon.icon = self._prepare_tray_icon(flag_image)
-        self._icon.title = ''
 
     def _refresh_ip(self):
-        ip_info = self._get_ip_info()
+        country_code = self._ip_service.get_country_code()
 
-        if ip_info:
-            flag_image = Image.open(f"{self._images_path}/{ip_info['countryCode'].lower()}.png")
-
+        if country_code:
+            flag_image = Image.open(f"{self._images_path}/{country_code.lower()}.png")
             self._icon.icon = self._prepare_tray_icon(flag_image)
-            self._icon.title = ip_info['query']
         else:
             self._set_default_icon()
 
@@ -130,6 +136,22 @@ class Application:
         else:
             self._add_to_startup()
             self._startup_status = True
+
+    def _ip_service_state(self, ip_service: str) -> bool:
+        return self._ip_services[ip_service]['state']
+
+    def _select_ip_service(self, icon: Menu, item: MenuItem):
+        self._ip_services = {key: {**value, 'state': False} for key, value in self._ip_services.items()}
+        self._ip_services[item.text]['state'] = True
+
+        self._ip_service = self._ip_services[item.text]['class']()
+
+        self._set_default_icon()
+        self._refresh_ip()
+
+    def _refresh_ip_manual(self, icon: Menu, item: MenuItem):
+        self._set_default_icon()
+        self._refresh_ip()
 
     def _stop(self, icon: Menu, item: MenuItem):
         self._stop_thread.set()
