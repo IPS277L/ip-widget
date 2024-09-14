@@ -5,13 +5,16 @@ IP Widget is a Windows Python application that displays the current IP address l
 Features:
 
 - Shows current IP address location.
-- Option to run at startup.
 - System tray menu for easy access.
+- Option to run at startup.
+- Option to manually refresh IP address information.
+- Option to choose IP information provider.
 
 Screenshots:
 
 ![Screenshot of IP Widget tray icon](https://github.com/IPS277L/ip-widget/blob/main/screenshots/ip-widget-tray.png)
 ![Screenshot of IP Widget tray icon menu](https://github.com/IPS277L/ip-widget/blob/main/screenshots/ip-widget-tray-menu.png)
+![Screenshot of IP Widget tray icon menu IP service](https://github.com/IPS277L/ip-widget/blob/main/screenshots/ip-widget-tray-menu-ip-service.png)
 
 # Local installation
 
